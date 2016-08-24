@@ -1,0 +1,55 @@
+<html>
+ <head>
+  <title>LHWeb</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="w3.css">
+  <style> 
+  </style>
+ </head>
+ <body>
+  <div class="w3-container w3-teal">
+   <h1>LHWeb</h1>
+  </div>
+
+    <ul class="w3-navbar w3-light-blue">
+    <li class="w3-white"><a href="/">Home</a></li>
+    <li><a href="/webconfig">Web Config</a></li>
+    <li><a href="/userconfig">User Config</a></li>
+    <li><a href="/browse">File Browser</a></li>
+    <li><a href="/showlog">Log</a></li>
+    <li><a href="/docu.html">Documentation</a></li>
+    </ul>
+
+
+  <div class="w3-row-padding w3-padding-64 w3-theme-l1">
+    <div class="w3-third">
+        <table class="w3-table w3-bordered w3-striped w3-card-4">
+            <tr><td colspan="2"><h2>WLAN Info</h2></td></tr>
+            <tr><td>SSID</td><td>{{ ssid }}</td></tr>
+            <tr><td>AP</td><td>{{ bssid }}</td></tr>
+            <tr><td>RSSI</td><td>{{ rssi }}</td></tr>
+            <tr><td>MAC</td><td>{{ mac }}</td></tr>
+        </table>
+    </div>
+    <div class="w3-third">
+        <table class="w3-table w3-bordered w3-striped w3-card-4">
+            <tr><td colspan="2"><h2>Netzwerk Info</h2></td></tr>
+            <tr><td>IP-Adresse</td><td>{{ ip }}</td></tr>
+            <tr><td>Netzmaske</td><td>{{ mask }}</td></tr>
+            <tr><td>Gateway</td><td>{{ gw }}</td></tr>
+            <tr><td>DNS</td><td>{{ dns }}</td></tr>
+            <tr><td>Hostname</td><td>{{ hostname }}</td></tr>
+        </table>
+    </div>
+    <div class="w3-third">
+        <table class="w3-table w3-bordered w3-striped w3-card-4">
+            <tr><td colspan="2"><h2>Hardware</h2></td></tr>
+            <tr><td>Flash Speicher</td><td>{{ flash_mem }}</td></tr>
+            <tr><td>Board ID</td><td>{{ board_id }}</td></tr>
+        </table>
+    </div>
+  </div>
+  
+  </body>
+</html>
+

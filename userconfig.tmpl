@@ -1,0 +1,38 @@
+<html>
+ <head>
+  <title>LHWeb</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="w3.css">
+  <style> 
+  </style>
+ </head>
+ <body>
+  <div class="w3-container w3-teal">
+   <h1>LHWeb</h1>
+  </div>
+
+    <ul class="w3-navbar w3-light-blue">
+    <li><a href="/">Home</a></li>
+    <li><a href="/webconfig">Web Config</a></li>
+    <li class="w3-white"><a href="/userconfig">User Config</a></li>
+    <li><a href="/browse">File Browser</a></li>
+    <li><a href="/showlog">Log</a></li>
+    <li><a href="/docu.html">Documentation</a></li>
+    </ul>
+    
+{{banner}}
+
+  <div class="w3-row-padding w3-padding-64 w3-theme-l1">
+    <div class="w3-col m12">
+      <form class="w3-container" method="post">
+        <table class="w3-table w3-bordered w3-striped w3-card-4">
+            <tr><td colspan="2"><h2>User Config</h2></td></tr>
+            {{userconfig}}
+        </table>
+        <p><input type="submit" value="Save"></p>
+      </form>        
+    </div>
+  </div>
+  
+  </body>
+</html>
