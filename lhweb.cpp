@@ -1,6 +1,6 @@
 #include "lhweb.h"
 
-
+#define VERSION "LHWeb v0.1"
 
 // Constructor - inits config and web server as well
 LHWeb::LHWeb(bool dbg): config("lhweb.conf"), httpd(80), telnetd(23){
@@ -292,6 +292,7 @@ String LHWeb::processCommand(String cmd, String key, String val){
         ret+="\n";
         ret+="? Commands:\n";
         ret+="?   ? - shows this help screen\n";
+        ret+="?   version - shows version information\n";
         ret+="?   config - sets or shows a config setting\n";
         ret+="?     * without parameter it shows all config settings\n";
         ret+="?     * with one paramter it shows the specified setting\n";
@@ -336,6 +337,10 @@ String LHWeb::processCommand(String cmd, String key, String val){
         }
     }else if(cmd=="reset"){
         system_restart();
+    }else if(cmd=="version"){
+        ret="version ";
+        ret+=VERSION;
+        ret+="\n";
     }else if(cmd=="set"){
         if(val==""){
             ret="ERROR Parameter missing\n";
