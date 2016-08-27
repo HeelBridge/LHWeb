@@ -21,6 +21,8 @@ extern "C" {
 #include "spi_flash.h"
 }
 
+#define MAX_SRV_CLIENTS 10
+typedef std::function< void(void)> THandlerFunction;
 
 class LHWeb{
   public:
@@ -30,7 +32,17 @@ class LHWeb{
     LHConfig config;
     LinkedList<String> log;
     ESP8266WebServer httpd;
-
+    
+    class TelnetCmd {
+    public:
+        const char* channel;
+        const char* command;
+        THandlerFunction func;
+    };
+    LinkedList<TelnetCmd*> telnet_commands;
+    WiFiClient telnetClients[MAX_SRV_CLIENTS];
+    WiFiServer telnetd;
+    
   private:
     uint8_t MAC_array[WL_MAC_ADDR_LENGTH];
     char MAC_char[4];
@@ -38,7 +50,7 @@ class LHWeb{
     String fallback_ssid="";
     String fallback_pass="";
     String fallback_ntp="0.pool.ntp.org";
-    int fallback_tz=1;
+    int fallback_tz=0;
     
     int tries_reconnect=0;
 
@@ -100,6 +112,15 @@ class LHWeb{
     // send an NTP request to the time server at the given address
     void sendNTPpacket();
 
+
+    // register urls and telnet commands to local functions
+    // uri - web uri eg "/lighton"
+    // function - pointer to a function to call
+    // channel - the channel number of the device.
+    // set - the telnet command to react to
+    void on(const char* uri, const char* channel, const char* command, THandlerFunction func);
+    void sendStatus(const char* channel, const char* state);
+
     String timeStamp();
     void addLog(String entry, bool remote=true);
 
@@ -132,6 +153,10 @@ class LHWeb{
 
     String sizing(size_t value);
     
+    String processCommand(String cmd, String key, String val);
+    String processInput(String input);
+    
+    void broadcast(String msg);
 };
 
 

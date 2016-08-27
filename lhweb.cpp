@@ -1,7 +1,9 @@
 #include "lhweb.h"
 
+
+
 // Constructor - inits config and web server as well
-LHWeb::LHWeb(bool dbg): config("lhweb.conf"), httpd(80){
+LHWeb::LHWeb(bool dbg): config("lhweb.conf"), httpd(80), telnetd(23){
     debug=dbg;
     readMacAddress();
     // set defaults
@@ -9,6 +11,8 @@ LHWeb::LHWeb(bool dbg): config("lhweb.conf"), httpd(80){
     fallback_pass="lh"+short_mac;
     fallback_ssid.trim();
     fallback_pass.trim();
+    
+    telnet_commands = LinkedList<TelnetCmd*>();
 }
 
 void LHWeb::begin(){
@@ -42,6 +46,10 @@ void LHWeb::begin(){
     
     // start web server
     httpd.begin();
+    
+    // start telnet server
+    telnetd.begin();
+    telnetd.setNoDelay(true);
 }
 
 
@@ -277,12 +285,128 @@ void LHWeb::reconnect(){
     }    
 }
 
+
+String LHWeb::processCommand(String cmd, String key, String val){
+    String ret="";
+    if(cmd=="?"){
+        ret+="\n";
+        ret+="? Commands:\n";
+        ret+="?   ? - shows this help screen\n";
+        ret+="?   config - sets or shows a config setting\n";
+        ret+="?     * without parameter it shows all config settings\n";
+        ret+="?     * with one paramter it shows the specified setting\n";
+        ret+="?     * with two paramters it sets the specified setting to the given value\n";
+        ret+="?     usage: var [<variable> [<value>]]\n";
+        ret+="?       example: config wifi_ssid ESP_Net\n";
+        ret+="?       example: config wifi_ssid\n";
+        ret+="?       example: config\n";
+        ret+="?     list of internal variables:\n";
+        ret+="?       wifi_ssid - SSID of the WIFI network\n";
+        ret+="?       wifi_pass - Password for the WIFI network\n";
+        ret+="?       wifi_hostname - name of the ESP module\n";
+        ret+="?       wifi_ntp - Name of NTP server\n";
+        ret+="?       wifi_tz - Time zone (offset in hours)\n";
+        ret+="?   reset - Restarts the ESP module\n";
+        ret+="?   set - set state of device/channel\n";       
+        ret+="?     usage: set <channel> <state>\n";        
+        ret+="?       example: set 0 on\n";
+        ret+="?   channel - shows availabe commands of given channel or all channels\n";
+        ret+="?     * without parameter it shows all available channels and commands\n";
+        ret+="?     * with one parameter it shows all available commands of given channel\n";
+        ret+="?       example: channel 0\n";
+        ret+="?       example: channel\n";
+        ret+="\n";
+    }else if(cmd=="config"){
+        if(key==""){
+            for(int i=0; i<config.size(); i++){
+                LHConfig::ConfigPair *conf=config.get(i);
+                ret+="config "+conf->key+" "+conf->val+"\n";
+            }            
+        }else if(val==""){
+            for(int i=0; i<config.size(); i++){
+                LHConfig::ConfigPair *conf=config.get(i);
+                if(key==conf->key){
+                    ret+="config "+conf->key+" "+conf->val+"\n";
+                }
+            }                
+        }else{
+            config.add(key, val);
+            config.save();
+            ret+="OK\n";
+        }
+    }else if(cmd=="reset"){
+        system_restart();
+    }else if(cmd=="set"){
+        if(val==""){
+            ret="ERROR Parameter missing\n";
+        }else{
+            bool found=false;
+            for(int i=0; i<telnet_commands.size(); i++){
+                TelnetCmd *tel=telnet_commands.get(i);
+                if(key==tel->channel && val==tel->command){
+                    tel->func();
+                    found=true;
+                }
+            }
+            if(found){
+                ret="OK\n";
+            }else{
+                ret="ERROR command not registered\n";
+            }
+        }
+    }else if(cmd=="channel"){
+        if(key==""){
+            for(int i=0; i<telnet_commands.size(); i++){
+                TelnetCmd *tel=telnet_commands.get(i);
+                ret+="channel ";
+                ret+=tel->channel;
+                ret+=" ";
+                ret+=tel->command;
+                ret+="\n";
+            }
+        }else if(val==""){
+            bool found=false;
+            for(int i=0; i<telnet_commands.size(); i++){
+                TelnetCmd *tel=telnet_commands.get(i);
+                if(key==tel->channel){
+                    ret+="channel ";
+                    ret+=tel->channel;
+                    ret+=" ";
+                    ret+=tel->command;
+                    ret+="\n";
+                    found=true;
+                }
+            }
+            if(!found){
+                ret="ERROR channel not found\n";
+            }
+        }
+    }
+    
+    return ret;
+}
+
+String LHWeb::processInput(String input){
+    int sep1 = input.indexOf(' ');
+    int sep2 = input.indexOf(' ', sep1+1);
+
+    String cmd = input.substring(0, sep1);
+    String key = input.substring(sep1+1, sep2);
+    String val = input.substring(sep2+1);
+
+    if(sep2<0) val="";
+    if(sep1<0) key="";
+
+    return processCommand(cmd, key, val);
+}
+
 // checks to see if we are still conencted to the wifi network
 // if conenction was lost it will try to reconnect
 // also handles all client requests.
 void LHWeb::doWork(){
     unsigned long sync_interval=600000;
     
+    // Check WIFI connection state
     if(timeStatus()==timeNotSet || timeStatus()==timeNeedsSync){
         sync_interval=30000;
     }
@@ -298,6 +422,7 @@ void LHWeb::doWork(){
         httpd.handleClient();
     }
 
+    // Handle Serial communication
     if(debug){
         while (Serial.available()) {
             char inChar = (char)Serial.read();
@@ -310,66 +435,56 @@ void LHWeb::doWork(){
 
         }
 
-        if(serial_input_complete){
-            //Serial.print("> ");
-            //Serial.println(serial_input_string);
-
-            int sep1 = serial_input_string.indexOf(' ');
-            int sep2 = serial_input_string.indexOf(' ', sep1+1);
-            //Serial.print("sep1:");
-            //Serial.print(sep1);
-            //Serial.print("  sep2:");
-            //Serial.print(sep2);
-
-            String cmd = serial_input_string.substring(0, sep1);
-            String key = serial_input_string.substring(sep1+1, sep2);
-            String val = serial_input_string.substring(sep2+1);
-            //Serial.print("  cmd:");
-            //Serial.print(cmd);
-            //Serial.print("  key:");
-            //Serial.print(key);
-            //Serial.print("  val:");
-            //Serial.println(val);
-
-            if(cmd=="?"){
-                Serial.println("");
-                Serial.println("Serial interface for LHWeb");
-                Serial.println("Commands:");
-                Serial.println("  ? - shows this help screen");
-                Serial.println("  list - shows all config variables");
-                Serial.println("  set - sets a config variable");
-                Serial.println("    usage: set <variable> <value>");
-                Serial.println("      example: set wifi_ssid ESP_Net");
-                Serial.println("    list of internal variables:");
-                Serial.println("      wifi_ssid - SSID of the WIFI network");
-                Serial.println("      wifi_pass - Password for the WIFI network");
-                Serial.println("      wifi_hostname - name of the ESP module");
-                Serial.println("      wifi_ntp - Name of NTP server");
-                Serial.println("      wifi_tz - Time zone (offset in hours)");
-                Serial.println("  reset - Restarts the ESP module");
-                Serial.println("");
-            }else if(cmd=="set"){
-                if(sep2<0){
-                    Serial.println("Usage:");
-                    Serial.println("  set <variable> <value>");
-                }else{
-                    config.add(key, val);
-                    config.save();
-                }
-            }else if(cmd=="list"){
-                config.dump();
-            }else if(cmd=="reset"){
-                system_restart();
-            }
-
+        if(serial_input_complete){         
+            serial_input_string.trim();
+            Serial.print(processInput(serial_input_string));
+            
             serial_input_string="";
             serial_input_complete=false;
+        }
+    }
+    
+    
+    // Handle telnet communication    
+    uint8_t i;
+    if (telnetd.hasClient()){
+        for(i = 0; i < MAX_SRV_CLIENTS; i++){
+            if (!telnetClients[i] || !telnetClients[i].connected()){
+                if(telnetClients[i]) telnetClients[i].stop();
+                telnetClients[i] = telnetd.available();
+                continue;
+            }
+        }
+        //no free spot
+        WiFiClient telnetClient = telnetd.available();
+        telnetClient.stop();
+    }
+    for(i = 0; i < MAX_SRV_CLIENTS; i++){
+        if (telnetClients[i] && telnetClients[i].connected()){
+            if(telnetClients[i].available()){
+                String str="";
+                while(telnetClients[i].available()){
+                    str+=(char)telnetClients[i].read();
+                }
+                str.trim();
+                telnetClients[i].print(processInput(str));
+            }
         }
     }
 
 }
 
 
+
+void LHWeb::broadcast(String msg){
+    if(debug) Serial.println(msg);
+    
+    for(uint8_t i = 0; i < MAX_SRV_CLIENTS; i++){
+        if (telnetClients[i] && telnetClients[i].connected()){
+            telnetClients[i].println(msg);
+        }
+    }    
+}
 
 
 // callback function for time synchronization
@@ -982,6 +1097,21 @@ String LHWeb::sizing(size_t value){
         return String((int)val)+"*1024^"+String(pre);
     }
 }
+
+
+void LHWeb::sendStatus(const char* channel, const char* state){
+    broadcast((String)"state "+channel+" "+state);
+}
+
+void LHWeb::on(const char* uri, const char* channel, const char* command, THandlerFunction func){
+    httpd.on(uri, func);
+    TelnetCmd *tel = new TelnetCmd();
+    tel->channel = channel;
+    tel->command = command;
+    tel->func = func;
+    telnet_commands.add(tel);
+}
+
 
 
 
