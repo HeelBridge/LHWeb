@@ -286,7 +286,9 @@ void LHWeb::reconnect(){
 }
 
 
-String LHWeb::processCommand(String cmd, String key, String val){
+String LHWeb::processCommand(String cmd, String key, String val, String par){
+    command_parameter=par;
+    
     String ret="";
     if(cmd=="?"){
         ret+="\n";
@@ -394,15 +396,18 @@ String LHWeb::processCommand(String cmd, String key, String val){
 String LHWeb::processInput(String input){
     int sep1 = input.indexOf(' ');
     int sep2 = input.indexOf(' ', sep1+1);
+    int sep3 = input.indexOf(' ', sep2+1);
 
     String cmd = input.substring(0, sep1);
     String key = input.substring(sep1+1, sep2);
-    String val = input.substring(sep2+1);
+    String val = input.substring(sep2+1, sep3);
+    String par = input.substring(sep3+1);
 
+    if(sep3<0) par="";
     if(sep2<0) val="";
     if(sep1<0) key="";
 
-    return processCommand(cmd, key, val);
+    return processCommand(cmd, key, val, par);
 }
 
 // checks to see if we are still conencted to the wifi network
@@ -477,6 +482,13 @@ void LHWeb::doWork(){
         }
     }
 
+    
+    // process timer
+    if( timer_time>0 && timer_time<=millis() ){
+        timer_time=0;
+        timer_function();
+    }
+    
 }
 
 
@@ -1118,5 +1130,22 @@ void LHWeb::on(const char* uri, const char* channel, const char* command, THandl
 }
 
 
+void LHWeb::deleteTimer(){
+    timer_time=0;
+}
 
+void LHWeb::setTimer(unsigned long int delay, THandlerFunction func){
+    timer_time=millis()+delay*1000;
+    timer_function=func;
+}
+
+String LHWeb::getParameter(){
+    if(command_parameter!=""){
+        return command_parameter;
+    }else if(httpd.args()>0){
+        return httpd.arg(0);
+    }else{
+        return String();
+    }
+}
 

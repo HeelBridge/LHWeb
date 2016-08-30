@@ -43,6 +43,7 @@ class LHWeb{
     WiFiClient telnetClients[MAX_SRV_CLIENTS];
     WiFiServer telnetd;
     
+    String command_parameter="";
   private:
     uint8_t MAC_array[WL_MAC_ADDR_LENGTH];
     char MAC_char[4];
@@ -67,6 +68,9 @@ class LHWeb{
 
     String serial_input_string="";
     bool serial_input_complete=false;
+    
+    unsigned long int timer_time=0;
+    THandlerFunction timer_function=NULL;
   public:
 
     // Constructor - inits config and web server as well
@@ -153,10 +157,15 @@ class LHWeb{
 
     String sizing(size_t value);
     
-    String processCommand(String cmd, String key, String val);
+    String processCommand(String cmd, String key, String val, String par);
     String processInput(String input);
     
     void broadcast(String msg);
+    
+    void deleteTimer();
+    void setTimer(unsigned long int delay, THandlerFunction func);
+    
+    String getParameter();
 };
 
 
