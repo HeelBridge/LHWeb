@@ -314,7 +314,7 @@ String LHWeb::processCommand(String cmd, String key, String val, String par){
         ret+="?     usage: set <channel> <state>\n";        
         ret+="?       example: set 0 on\n";
         ret+="?   channel - shows availabe commands of given channel or all channels\n";
-        ret+="?     * without parameter it shows all available channels and commands\n";
+        ret+="?     * without parameter it shows all available channels\n";
         ret+="?     * with one parameter it shows all available commands of given channel\n";
         ret+="?       example: channel 0\n";
         ret+="?       example: channel\n";
@@ -363,13 +363,15 @@ String LHWeb::processCommand(String cmd, String key, String val, String par){
         }
     }else if(cmd=="channel"){
         if(key==""){
+            String lastChan="";
             for(int i=0; i<telnet_commands.size(); i++){
                 TelnetCmd *tel=telnet_commands.get(i);
-                ret+="channel ";
-                ret+=tel->channel;
-                ret+=" ";
-                ret+=tel->command;
-                ret+="\n";
+                if(String(tel->channel) != lastChan){
+                    ret+="channel ";
+                    ret+=tel->channel;
+                    ret+="\n";
+                    lastChan=tel->channel;
+                }
             }
         }else if(val==""){
             bool found=false;
