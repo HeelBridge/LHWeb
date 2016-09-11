@@ -318,6 +318,7 @@ String LHWeb::processCommand(String cmd, String key, String val, String par){
         ret+="?     * with one parameter it shows all available commands of given channel\n";
         ret+="?       example: channel 0\n";
         ret+="?       example: channel\n";
+        ret+="?   rssi - shows wifi quality\n";
         ret+="\n";
     }else if(cmd=="config"){
         if(key==""){
@@ -390,6 +391,10 @@ String LHWeb::processCommand(String cmd, String key, String val, String par){
                 ret="ERROR channel not found\n";
             }
         }
+    }else if(cmd=="rssi"){
+        ret="rssi "+String(WiFi.RSSI())+"\n";
+    }else{
+        ret="ERROR unknown command";
     }
     
     return ret;
