@@ -392,9 +392,11 @@ String LHWeb::processCommand(String cmd, String key, String val, String par){
             }
         }
     }else if(cmd=="rssi"){
-        ret="rssi "+String(WiFi.RSSI())+"\n";
+        ret="rssi "
+        ret+=WiFi.RSSI()
+        ret+="\n\n";
     }else{
-        ret="ERROR unknown command";
+        ret="ERROR unknown command\n";
     }
     
     return ret;
@@ -485,6 +487,7 @@ void LHWeb::doWork(){
                 }
                 str.trim();
                 telnetClients[i].print(processInput(str));
+                delay(10);
             }
         }
     }
