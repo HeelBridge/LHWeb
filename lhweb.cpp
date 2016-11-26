@@ -392,8 +392,8 @@ String LHWeb::processCommand(String cmd, String key, String val, String par){
             }
         }
     }else if(cmd=="rssi"){
-        ret="rssi "
-        ret+=WiFi.RSSI()
+        ret="rssi ";
+        ret+=WiFi.RSSI();
         ret+="\n\n";
     }else{
         ret="ERROR unknown command\n";
